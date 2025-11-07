@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Ultimate Dictionary Battle</title>
+<style>
+  body {
+    background: linear-gradient(135deg, #101820, #3a0ca3);
+    color: #fff;
+    font-family: 'Courier New', monospace;
+    overflow: hidden;
+    margin: 0;
+    height: 100vh;
+  }
+  h1 {
+    text-align: center;
+    margin-top: 10px;
+    text-shadow: 0 0 10px #fff;
+  }
+  #battlefield {
+    position: relative;
+    width: 100%;
+    height: 85vh;
+    overflow: hidden;
+  }
+  .dictionary {
+    position: absolute;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-weight: bold;
+    animation: float 3s ease-in-out infinite;
+  }
+  @keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+    100% { transform: translateY(0px); }
+  }
+  .attack {
+    position: absolute;
+    font-size: 18px;
+    animation: fly 2s linear forwards;
+  }
+  @keyframes fly {
+    from { transform: translateY(0px) scale(1); opacity: 1; }
+    to { transform: translateY(-300px) scale(1.5); opacity: 0; }
+  }
+</style>
+</head>
+<body>
+
+<h1>⚔️ The Ultimate Dictionary Battle ⚔️</h1>
+<div id="battlefield"></div>
+
+<script>
+const battlefield = document.getElementById('battlefield');
+
+const dictionaries = [
+  "Nguyen The Hoang", "Nguyen Thao Nguyen", "Nguyen Khánh Bang", "Nguyen Đức Thiện",
+  "Antonio Guterres", "Mrudav Mehta", "Shubh Mehta", "Ali Akram", "Nguyen Hong Duc",
+  "Nguyen Hong Quan", "Nguyen Ha Dung", "Nguyen Phương Anh", "Trần Nhật Minh",
+  "Trần Sỹ Minh Tiến", "Dieu Linh", "Nhi Linh", "Aittaty Kyzybek", "Ta Thu Hau",
+  "Đang Sinh Toan", "Tsevelsuren", "Kangaroo", "Khangai Shirchin", "Bat Erdene",
+  "Nguyen Đình Huy", "Nguyễn Tùng Quan", "Quang Bùi", "Hariwon", "Hải Đăng",
+  "Azamat Dzholbunov", "Adilet", "Tạ Tùng Dương", "Hiệp Hoàng Nghĩa", "Kylian Mbappe"
+];
+
+const attackWords = [
+  "redefines truth!", "creates chaos!", "summons logic!", "casts poetry!",
+  "negotiates peace!", "launches AI words!", "jokes about reality!", 
+  "drops a meme bomb!", "quotes ancient wisdom!", "builds consensus!",
+  "translates emotion!", "shifts paradigms!", "explodes syntax!",
+  "spawns new slang!", "rewrites meaning!", "defends grammar!",
+  "encrypts a sentence!", "debates semantics!", "whispers philosophy!",
+  "screams innovation!", "glitches the alphabet!", "summons emojis!",
+  "fires commas!", "launches word missiles!", "breaks punctuation!",
+  "summons new lexicon!", "casts multilingual lightning!", 
+  "translates chaos!", "shouts 'DEFINE ME IF YOU CAN!'", "creates a wordstorm!"
+];
+
+// Create random color generator
+function randomColor() {
+  return `hsl(${Math.random() * 360}, 80%, 60%)`;
+}
+
+// Create each dictionary as a floating div
+dictionaries.forEach(name => {
+  const div = document.createElement('div');
+  div.className = 'dictionary';
+  div.textContent = name + "'s Dictionary";
+  div.style.top = Math.random() * 75 + '%';
+  div.style.left = Math.random() * 85 + '%';
+  div.style.background = randomColor();
+  battlefield.appendChild(div);
+});
+
+// Attack animation
+function randomAttack() {
+  const dicts = document.querySelectorAll('.dictionary');
+  const attacker = dicts[Math.floor(Math.random() * dicts.length)];
+  const attack = document.createElement('div');
+  attack.className = 'attack';
+  attack.textContent = attackWords[Math.floor(Math.random() * attackWords.length)];
+  attack.style.left = attacker.offsetLeft + 'px';
+  attack.style.top = attacker.offsetTop + 'px';
+  attack.style.color = randomColor();
+  battlefield.appendChild(attack);
+
+  setTimeout(() => attack.remove(), 2000);
+}
+
+// Launch random attacks every 800 ms
+setInterval(randomAttack, 800);
+</script>
+</body>
+</html>
