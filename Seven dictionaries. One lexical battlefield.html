@@ -1,0 +1,627 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Dictionary Battle — HTML/JS Simulation</title>
+<style>
+  :root{
+    --bg:#0f1724; --panel:#0b1220; --muted:#9aa4b2; --accent:#6ee7b7;
+    --card:#0f1728; --glass: rgba(255,255,255,0.03);
+    --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+                 Roboto, "Helvetica Neue", Arial;
+  }
+  html,body{height:100%;margin:0;background:
+    radial-gradient(1200px 600px at 10% 10%, rgba(110,231,183,0.04), transparent),
+    linear-gradient(180deg,#071023 0%, #071827 60%);
+    font-family:var(--font-sans); color:#e6eef6; -webkit-font-smoothing:antialiased;
+  }
+  .app{
+    max-width:1100px;margin:32px auto;padding:22px;border-radius:12px;
+    background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.015));
+    box-shadow: 0 6px 30px rgba(3,6,18,0.6);
+  }
+  header{display:flex;align-items:center;gap:16px;margin-bottom:14px}
+  header h1{margin:0;font-size:20px;letter-spacing:0.2px}
+  header p{margin:0;color:var(--muted);font-size:13px}
+  .flex{display:flex;gap:16px}
+  .fighters{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;flex:1}
+  .fighter{
+    background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02));
+    padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);
+    display:flex;gap:12px;align-items:center;cursor:pointer; transition:transform .15s;
+  }
+  .fighter:hover{transform:translateY(-4px)}
+  .av{width:56px;height:56px;border-radius:10px;flex-shrink:0;
+      display:flex;align-items:center;justify-content:center;font-size:26px;
+      background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border:1px solid rgba(255,255,255,0.04)
+  }
+  .meta{flex:1}
+  .name{font-weight:700;font-size:15px}
+  .role{font-size:12px;color:var(--muted);margin-bottom:6px}
+  .statrow{display:flex;gap:6px;flex-wrap:wrap}
+  .stat{font-size:12px;padding:6px 8px;border-radius:999px;background:var(--glass);color:var(--muted)}
+  .hpbar{height:10px;background:rgba(255,255,255,0.035);border-radius:999px;margin-top:8px;overflow:hidden}
+  .hp{height:100%;width:100%;background:linear-gradient(90deg,#33d69f,#2bb0ff);transition:width .5s}
+  .controls{width:360px;min-width:240px;padding:12px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.015));border:1px solid rgba(255,255,255,0.03)}
+  .controls button{width:100%;padding:10px;border-radius:8px;border:0;background:linear-gradient(90deg,#2bb0ff,#6ee7b7);color:#001; font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(43,176,255,0.12)}
+  .controls small{display:block;color:var(--muted);margin-top:8px}
+  .battle-stage{margin-top:16px;padding:12px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.03);min-height:140px;position:relative;overflow:hidden}
+  .log{max-height:240px;overflow:auto;padding:6px;font-size:13px;color:#d9eef7}
+  .log p{margin:6px 0;padding:6px;border-radius:8px;background:rgba(255,255,255,0.02)}
+  .stat-panel{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .big{
+    display:flex;gap:14px;align-items:center;justify-content:space-between;
+    margin-top:10px;
+  }
+  .card-title{font-size:13px;color:var(--muted)}
+  .inspect{padding:8px;border-radius:8px;background:rgba(255,255,255,0.02);font-size:13px}
+  .ability{display:inline-block;padding:6px 8px;border-radius:8px;background:rgba(255,255,255,0.02);margin-right:8px;font-size:12px}
+  footer{margin-top:14px;color:var(--muted);font-size:12px;text-align:center}
+  /* small animation bits */
+  .floating-emoji{position:absolute;font-size:20px;opacity:0;transform:translateY(0);transition:transform 900ms cubic-bezier(.2,.9,.2,1),opacity .9s}
+  .highlight{box-shadow:0 8px 28px rgba(43,176,255,0.08);transform:translateY(-6px)}
+  @media (max-width:880px){.app{margin:12px} .fighters{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>Dictionary Battle — HTML/JS Simulation</h1>
+      <p>Seven dictionaries. One lexical battlefield. Click Start to simulate rounds.</p>
+    </div>
+  </header>
+
+  <div style="display:flex;gap:16px;align-items:flex-start">
+    <div style="flex:1">
+      <div class="fighters" id="fighters"></div>
+
+      <div class="battle-stage" id="stage">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div>
+            <div class="card-title">Battle Log</div>
+            <div class="big">
+              <div class="inspect" id="roundInfo">Round: 0</div>
+              <div style="display:flex;gap:8px">
+                <div class="inspect" id="aliveInfo">Alive: 7</div>
+                <div class="inspect" id="lastAction">Last action: —</div>
+              </div>
+            </div>
+          </div>
+          <div style="text-align:right;color:var(--muted);font-size:12px">
+            Simulation mode: <span id="mode">Auto</span>
+          </div>
+        </div>
+
+        <div class="log" id="log" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <aside class="controls">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        <select id="modeSelect" style="flex:1;padding:8px;border-radius:8px;border:0;background:rgba(255,255,255,0.02);color:#dff">
+          <option value="auto">Auto (play until 1 left)</option>
+          <option value="manual">Manual (step)</option>
+        </select>
+        <button id="resetBtn" title="Reset">⟳</button>
+      </div>
+
+      <button id="startBtn">Start Battle</button>
+      <div style="height:8px"></div>
+      <button id="stepBtn" style="background:linear-gradient(90deg,#ffb86b,#ff7aa2)">Next Round</button>
+
+      <small>Click a dictionary card to inspect it. You can tweak stats inside the code for different outcomes.</small>
+    </aside>
+  </div>
+
+  <footer>
+    Tip: This is deterministic with the given random seed. Edit seed in code to get varied results.
+  </footer>
+</div>
+
+<script>
+/*
+  Dictionary Battle Simulation
+  - Seven fighters, each with stats: HP, Attack, Defense, Speed, Special (ability)
+  - Every round, a fighter acts in order of speed. They pick a target and perform an action.
+  - The battle ends when 1 or 0 fighters remain alive.
+  - Single-file, easy to extend.
+*/
+
+(() => {
+  // RNG with seed so results are reproducible for a given seed.
+  let seed = 123456789;
+  function rand() {
+    // xorshift32-ish
+    seed ^= seed << 13;
+    seed ^= seed >>> 17;
+    seed ^= seed << 5;
+    return (seed >>> 0) / 4294967295;
+  }
+  // small helper
+  function randInt(min, max){ return Math.floor(rand() * (max - min + 1)) + min; }
+
+  // fighter definitions
+  const baseFighters = [
+    {
+      id: 'hoang', name: 'Nguyen The Hoang', emoji: '🧠',
+      role: 'Logic & Structure',
+      desc: 'Precise, highly defensive. Uses syntax strikes.',
+      stats: { hp: 120, atk: 16, def: 14, spd: 10 },
+      ability: { name: 'Syntax Bomb', desc: 'High-precision attack ignoring some defense', cooldown: 3 }
+    },
+    {
+      id: 'thao', name: 'Nguyen Thao Nguyen', emoji: '💃',
+      role: 'Creativity & Emotion',
+      desc: 'Poetic definitions that charm and heal allies.',
+      stats: { hp: 110, atk: 12, def: 10, spd: 12 },
+      ability: { name: 'Poetic Embrace', desc: 'Heals a small amount or confuses target', cooldown: 3 }
+    },
+    {
+      id: 'bang', name: 'Nguyen Khánh Bang', emoji: '🔥',
+      role: 'Innovation & Rebellion',
+      desc: 'Unpredictable, high volatility — spawns neologisms (random effects).',
+      stats: { hp: 100, atk: 18, def: 9, spd: 14 },
+      ability: { name: 'Neologism Storm', desc: 'Random effect: extra damage / stun / buff', cooldown: 4 }
+    },
+    {
+      id: 'thien', name: 'Nguyen Đức Thiện', emoji: '🧩',
+      role: 'Wisdom & Calm',
+      desc: 'Steady, high defense and counterattacks with classical wisdom.',
+      stats: { hp: 130, atk: 14, def: 16, spd: 8 },
+      ability: { name: 'Ancient Counter', desc: 'Chance to reflect damage back', cooldown: 4 }
+    },
+    {
+      id: 'guterres', name: 'Antonio Guterres', emoji: '🌍',
+      role: 'Diplomacy & Order',
+      desc: 'Neutralizes chaos, can reduce damage or mediate (damage split).',
+      stats: { hp: 115, atk: 13, def: 12, spd: 11 },
+      ability: { name: 'Diplomatic Ceasefire', desc: 'Reduces incoming damage for all for 1 turn', cooldown: 5 }
+    },
+    {
+      id: 'mrudav', name: 'Mrudav Mehta', emoji: '🧪',
+      role: 'Experimentation',
+      desc: 'Logical, tests hypotheses — deals consistent, slightly boosted damage.',
+      stats: { hp: 105, atk: 17, def: 11, spd: 13 },
+      ability: { name: 'A/B Test', desc: 'Performs a test that either buffs self or debuffs target', cooldown: 3 }
+    },
+    {
+      id: 'shubh', name: 'Shubh Mehta', emoji: '⚡',
+      role: 'Philosophy & Humor',
+      desc: 'Paradoxical attacks: sometimes strong, sometimes healing via laughter.',
+      stats: { hp: 108, atk: 15, def: 10, spd: 12 },
+      ability: { name: 'Existential Punchline', desc: 'Deals damage and may cause confusion (target misses next action)', cooldown: 4 }
+    }
+  ];
+
+  // state
+  let fighters = [];
+  let round = 0;
+  let logEl = document.getElementById('log');
+  let fightersEl = document.getElementById('fighters');
+  let roundInfo = document.getElementById('roundInfo');
+  let aliveInfo = document.getElementById('aliveInfo');
+  let lastAction = document.getElementById('lastAction');
+  let modeSelect = document.getElementById('modeSelect');
+  let modeDisplay = document.getElementById('mode');
+  let startBtn = document.getElementById('startBtn');
+  let stepBtn = document.getElementById('stepBtn');
+  let resetBtn = document.getElementById('resetBtn');
+  let stage = document.getElementById('stage');
+
+  function init(newSeed) {
+    if (typeof newSeed !== 'undefined') seed = newSeed;
+    // deep clone
+    fighters = baseFighters.map(f => ({
+      ...f,
+      currentHp: f.stats.hp,
+      cd: 0, // cooldown counter
+      alive: true,
+      buffs: [], // {type, value, turns}
+      debuffs: []
+    }));
+    round = 0;
+    logEl.innerHTML = '';
+    updateUI();
+  }
+
+  // UI render
+  function updateUI() {
+    fightersEl.innerHTML = '';
+    fighters.forEach(f => {
+      const card = document.createElement('div');
+      card.className = 'fighter' + (f.alive ? '' : ' dead');
+      card.title = f.desc;
+      card.innerHTML = `
+        <div class="av">${f.emoji}</div>
+        <div class="meta">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div class="name">${f.name}</div>
+              <div class="role">${f.role}</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:13px;color:var(--muted)">HP</div>
+              <div style="font-weight:800">${Math.max(0, Math.round(f.currentHp))}/${f.stats.hp}</div>
+            </div>
+          </div>
+          <div class="hpbar" aria-hidden="true">
+            <div class="hp" style="width:${Math.max(0, (f.currentHp / f.stats.hp) * 100)}%"></div>
+          </div>
+          <div style="margin-top:8px" class="statrow">
+            <div class="stat">ATK ${f.stats.atk}</div>
+            <div class="stat">DEF ${f.stats.def}</div>
+            <div class="stat">SPD ${f.stats.spd}</div>
+            <div class="stat">${f.ability.name}</div>
+          </div>
+        </div>
+      `;
+      // click to inspect
+      card.addEventListener('click', () => inspectFighter(f.id));
+      fightersEl.appendChild(card);
+    });
+
+    const aliveCount = fighters.filter(f => f.alive).length;
+    aliveInfo.textContent = `Alive: ${aliveCount}`;
+    roundInfo.textContent = `Round: ${round}`;
+  }
+
+  function log(text, cls){
+    const p = document.createElement('p');
+    p.innerHTML = text;
+    if(cls) p.classList.add(cls);
+    logEl.prepend(p);
+    // keep log to 80 entries
+    while(logEl.children.length > 120) logEl.removeChild(logEl.lastChild);
+  }
+
+  function inspectFighter(id){
+    const f = fighters.find(x => x.id === id);
+    if(!f) return;
+    const aliveStr = f.alive ? 'Alive' : 'Down';
+    const buffs = f.buffs.map(b => `${b.type}(${b.value},${b.turns})`).join(', ') || '—';
+    const debuffs = f.debuffs.map(b => `${b.type}(${b.value},${b.turns})`).join(', ') || '—';
+    lastAction.textContent = `Inspecting ${f.name} — ${aliveStr}`;
+    log(`<strong>Inspect:</strong> ${f.emoji} <strong>${f.name}</strong> — HP: ${Math.round(f.currentHp)}/${f.stats.hp} — Cooldown: ${f.cd} — Buffs: ${buffs} — Debuffs: ${debuffs}`);
+    // highlight element
+    const nodes = Array.from(document.querySelectorAll('.fighter'));
+    nodes.forEach(n => n.classList.remove('highlight'));
+    const idx = fighters.indexOf(f);
+    if(nodes[idx]) {
+      nodes[idx].classList.add('highlight');
+      setTimeout(()=> nodes[idx].classList.remove('highlight'), 900);
+    }
+  }
+
+  // helper: choose attacker order by speed (alive only)
+  function actionOrder(){
+    return fighters.filter(f => f.alive).slice().sort((a,b)=>{
+      // speed + small randomness to break ties
+      const aSpd = a.stats.spd + rand() * 0.3;
+      const bSpd = b.stats.spd + rand() * 0.3;
+      return bSpd - aSpd;
+    });
+  }
+
+  // apply damage with defense taken into account
+  function applyDamage(attacker, target, baseDamage, ignoreDef=false){
+    const def = ignoreDef ? 0 : target.stats.def;
+    // damage reduced by def factor (simple formula)
+    const dmg = Math.max(1, Math.round(baseDamage * (100 / (100 + def))));
+    target.currentHp -= dmg;
+    log(`${attacker.emoji} <strong>${attacker.name}</strong> hits ${target.emoji} <strong>${target.name}</strong> for <strong>${dmg}</strong> damage.`);
+    animateEmoji(attacker.emoji, target);
+    if (target.currentHp <= 0){
+      target.alive = false; target.currentHp = 0;
+      log(`💀 ${target.emoji} <strong>${target.name}</strong> has been <strong>defeated</strong>.`);
+    }
+    updateUI();
+    return dmg;
+  }
+
+  // abilities
+  function useAbility(actor, targets){
+    const ab = actor.ability.name;
+    actor.cd = actor.ability.cooldown; // set cooldown
+    lastAction.textContent = `${actor.name} used ${ab}`;
+    switch(actor.id){
+      case 'hoang':
+        // Syntax Bomb: heavy damage ignoring 50% defense
+        {
+          const t = targets[0];
+          const dmg = Math.round(actor.stats.atk * 2.1);
+          applyDamage(actor, t, dmg, true);
+          log(`💥 Syntax Bomb! (ignores part of defense)`);
+        }
+        break;
+      case 'thao':
+        // Poetic Embrace: heals self or ally (if ally low) ; sometimes confuses
+        {
+          const allyCandidates = fighters.filter(f=>f.alive);
+          // prefer lowest hp ally (including self)
+          const target = allyCandidates.sort((a,b)=> (a.currentHp/a.stats.hp) - (b.currentHp/b.stats.hp))[0];
+          const heal = Math.round(actor.stats.atk * 1.5);
+          if(rand() < 0.12){
+            // confuse effect on random enemy
+            const enemy = fighters.filter(f=>f.alive && f.id !== actor.id)[randInt(0, fighters.filter(f=>f.alive && f.id !== actor.id).length-1)];
+            if(enemy){
+              enemy.debuffs.push({type:'confused', value:1, turns:1});
+              log(`🎭 Poetic Embrace backfires into a confusing metaphor! ${enemy.name} is confused.`);
+            }
+          } else {
+            target.currentHp = Math.min(target.stats.hp, target.currentHp + heal);
+            log(`💚 Poetic Embrace heals ${target.name} for ${heal} HP.`);
+          }
+        }
+        break;
+      case 'bang':
+        // Neologism Storm: random effect
+        {
+          const r = rand();
+          if(r < 0.33){
+            const t = targets[0];
+            const dmg = Math.round(actor.stats.atk * 2.0);
+            applyDamage(actor, t, dmg);
+            log(`🔥 Neologism Storm — savage slang deals big damage!`);
+          } else if(r < 0.66){
+            // stun target (skip next turn)
+            const t = targets[0];
+            t.debuffs.push({type:'stunned', value:1, turns:1});
+            log(`💥 Neologism Storm — target ${t.name} stunned by viral slang!`);
+          } else {
+            // buff self atk
+            actor.buffs.push({type:'atk', value:4, turns:3});
+            log(`✨ Neologism Storm — ${actor.name} invents a new word and gets +4 ATK for 3 turns.`);
+          }
+        }
+        break;
+      case 'thien':
+        // Ancient Counter: set counter chance
+        {
+          actor.buffs.push({type:'counter', value:0.35, turns:2});
+          log(`🛡️ Ancient Counter — ${actor.name} prepares to reflect some incoming damage (35% chance for 2 turns).`);
+        }
+        break;
+      case 'guterres':
+        // Diplomatic Ceasefire: reduce incoming damage for all players 1 turn
+        {
+          fighters.filter(f=>f.alive).forEach(f => {
+            f.buffs.push({type:'damage_reduction', value:0.4, turns:1});
+          });
+          log(`🤝 Diplomatic Ceasefire — all alive dictionaries take 40% less damage this round.`);
+        }
+        break;
+      case 'mrudav':
+        // A/B Test: 50/50 buff self or debuff target
+        {
+          if(rand() < 0.5){
+            actor.buffs.push({type:'atk', value:5, turns:2});
+            log(`🔬 A/B Test success — ${actor.name} gets +5 ATK for 2 turns.`);
+          } else {
+            const t = targets[0];
+            t.debuffs.push({type:'atk_down', value:4, turns:2});
+            log(`🔬 A/B Test fail — ${t.name} receives -4 ATK for 2 turns.`);
+          }
+        }
+        break;
+      case 'shubh':
+        // Existential Punchline: does damage and may confuse target
+        {
+          const t = targets[0];
+          const dmg = Math.round(actor.stats.atk * 1.6);
+          applyDamage(actor, t, dmg);
+          if(rand() < 0.35){
+            t.debuffs.push({type:'confused', value:1, turns:1});
+            log(`😂 Existential Punchline — ${t.name} is confused (may miss their next action).`);
+          }
+        }
+        break;
+      default:
+        break;
+    }
+  }
+
+  // normal attack action
+  function normalAttack(attacker, target){
+    // base damage = attacker's atk plus buffs minus target debuffs, etc.
+    let atk = attacker.stats.atk;
+    attacker.buffs.forEach(b=>{ if(b.type==='atk') atk += b.value; });
+    attacker.debuffs.forEach(d=>{ if(d.type==='atk_down') atk -= d.value; });
+    atk = Math.max(1, Math.round(atk));
+    // check if target has damage_reduction buff
+    let preDefReduced = false;
+    const dr = target.buffs.find(b=>b.type==='damage_reduction');
+    if(dr) {
+      // temporarily reduce damage by dr.value
+      const dmg = Math.max(1, Math.round(atk * (100 / (100 + target.stats.def))));
+      const reduced = Math.round(dmg * (1 - dr.value));
+      // apply reduction by computing a pseudo damage value — we'll just apply adjusted damage below
+      // But to keep consistent with applyDamage (which applies def), we'll compute a fake baseDamage so that applyDamage leads to 'reduced' value.
+      // Simpler: applyDamage normally but then subtract reduction effect:
+      const initial = applyDamage(attacker, target, atk);
+      // then "heal back" the reduction amount because we applied full damage already
+      const healBack = Math.round(initial * dr.value);
+      target.currentHp += healBack;
+      log(`🛡️ ${target.name}'s diplomatic shield reduces damage by ${Math.round(dr.value*100)}%. (Healed ${healBack})`);
+      // handle counter buff if any (thien)
+      maybeCounter(attacker, target, initial - healBack);
+      return;
+    } else {
+      const dmg = applyDamage(attacker, target, atk);
+      maybeCounter(attacker, target, dmg);
+      return;
+    }
+  }
+
+  function maybeCounter(attacker, target, dmgDealt){
+    // if target has counter buff
+    const counter = target.buffs.find(b=>b.type==='counter');
+    if(counter && rand() < counter.value){
+      // reflect a portion
+      const reflected = Math.max(1, Math.round(dmgDealt * 0.4));
+      attacker.currentHp -= reflected;
+      log(`↩️ ${target.name} reflects ${reflected} damage back to ${attacker.name} (Ancient Counter).`);
+      if(attacker.currentHp <= 0){ attacker.alive = false; attacker.currentHp = 0; log(`💀 ${attacker.name} fell to reflected damage.`); }
+      updateUI();
+    }
+  }
+
+  // reduce durations for buffs/debuffs and cooldowns
+  function decayStatuses(){
+    fighters.forEach(f=>{
+      // cooldown
+      if(f.cd > 0) f.cd = Math.max(0, f.cd - 1);
+      // buffs
+      f.buffs.forEach(b=> b.turns--);
+      f.buffs = f.buffs.filter(b => b.turns > 0);
+      // debuffs
+      f.debuffs.forEach(d=> d.turns--);
+      f.debuffs = f.debuffs.filter(d => d.turns > 0);
+      // small regeneration for poetic fighters? (optional)
+    });
+  }
+
+  // single round of actions
+  function roundTick(){
+    round++;
+    roundInfo.textContent = `Round: ${round}`;
+    log(`<strong>— Round ${round} begins —</strong>`);
+    const order = actionOrder();
+    for(const actor of order){
+      if(!actor.alive) continue;
+      // if stunned, skip and remove stunned debuff
+      const stunned = actor.debuffs.find(d=>d.type === 'stunned');
+      const confused = actor.debuffs.find(d=>d.type === 'confused');
+      if(stunned){
+        log(`⏸️ ${actor.name} is stunned and misses their turn.`);
+        actor.debuffs = actor.debuffs.filter(d=>d.type !== 'stunned');
+        continue;
+      }
+      if(confused && rand() < 0.5){
+        log(`🤯 ${actor.name} is confused and loses their action.`);
+        // reduce confused one turn (already handled by decay at end)
+        continue;
+      }
+
+      // decide whether to use ability: if cooldown is 0 and random chance + tactical heuristics
+      let usedAbility = false;
+      const aliveEnemies = fighters.filter(f=>f.alive && f.id !== actor.id);
+      if(aliveEnemies.length === 0) { break; }
+
+      // prefer ability if actor low hp and ability is a heal (thao) or defensive (guterres)
+      if(actor.cd === 0){
+        // small heuristics for usage
+        let use = false;
+        if(actor.id === 'thao' && actor.currentHp < actor.stats.hp * 0.6) use = true;
+        else if(actor.id === 'guterres') use = true; // diplomat uses often
+        else if(actor.id === 'thien' && rand() < 0.6) use = true;
+        else if(actor.id === 'bang' && rand() < 0.5) use = true;
+        else if(rand() < 0.12) use = true; // occasional ability use
+        if(use){
+          // ability targets: usually the alive enemy list, pick one random enemy as primary
+          const primary = aliveEnemies[randInt(0, aliveEnemies.length-1)];
+          useAbility(actor, [primary]);
+          usedAbility = true;
+        }
+      }
+
+      if(!usedAbility){
+        // normal attack: pick the enemy with lowest currentHp percentage (finishers)
+        const target = aliveEnemies.slice().sort((a,b)=> (a.currentHp/a.stats.hp) - (b.currentHp/b.stats.hp))[0];
+        normalAttack(actor, target);
+      }
+
+      // check end condition mid-round
+      const aliveCount = fighters.filter(f=>f.alive).length;
+      if(aliveCount <= 1) break;
+    }
+
+    decayStatuses();
+    updateUI();
+    const aliveCount = fighters.filter(f=>f.alive).length;
+    if(aliveCount <= 1){
+      const winner = fighters.find(f=>f.alive);
+      if(winner){
+        log(`<strong>🏆 ${winner.emoji} ${winner.name} is the last dictionary standing!</strong>`);
+      } else {
+        log(`<strong>⚖️ All dictionaries fell — it's a tie (mutual annihilation).</strong>`);
+      }
+    }
+  }
+
+  // small floating emoji animation for attacks
+  function animateEmoji(emoji, target){
+    const el = document.createElement('div');
+    el.className = 'floating-emoji';
+    el.textContent = emoji;
+    el.style.left = (20 + rand()*70) + '%';
+    el.style.top = (20 + rand()*60) + '%';
+    stage.appendChild(el);
+    // animate in
+    requestAnimationFrame(()=> {
+      el.style.opacity = '1';
+      el.style.transform = 'translateY(-40px) scale(1.1)';
+    });
+    setTimeout(()=> {
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(-90px) scale(0.6)';
+    }, 700 + rand()*300);
+    setTimeout(()=> { stage.removeChild(el); }, 1500);
+  }
+
+  // control handlers
+  startBtn.addEventListener('click', () => {
+    startSimulation();
+  });
+  stepBtn.addEventListener('click', () => {
+    if(modeSelect.value === 'manual') {
+      if(fighters.filter(f=>f.alive).length > 1) roundTick();
+      else log('Battle already finished. Reset to play again.');
+    } else {
+      // if auto, step acts as "fast-forward one round"
+      if(fighters.filter(f=>f.alive).length > 1) roundTick();
+    }
+  });
+  resetBtn.addEventListener('click', () => {
+    // new seed for variety
+    seed = Math.floor(Math.random() * 99999999) + 1;
+    init(seed);
+    log(`<em>Simulation reset — new seed ${seed}</em>`);
+  });
+
+  modeSelect.addEventListener('change', () => {
+    modeDisplay.textContent = modeSelect.value === 'auto' ? 'Auto' : 'Manual';
+  });
+
+  let autoInterval = null;
+  function startSimulation(){
+    // if battle already running, ignore
+    if(fighters.filter(f=>f.alive).length <= 1) {
+      log('Battle finished — reset to start again.');
+      return;
+    }
+    if(modeSelect.value === 'auto'){
+      // auto play with an interval — but keep it pleasant
+      if(autoInterval) clearInterval(autoInterval);
+      autoInterval = setInterval(() => {
+        if(fighters.filter(f=>f.alive).length > 1){
+          roundTick();
+        } else {
+          clearInterval(autoInterval);
+        }
+      }, 900);
+      log('Auto-simulation started.');
+    } else {
+      log('Manual mode — use "Next Round" to step through.');
+    }
+  }
+
+  // initial setup
+  init(seed);
+  log(`<em>Welcome — click <strong>Start Battle</strong> to begin.</em>`);
+})();
+</script>
+</body>
+</html>
